@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sports Car Search Agent - ChatKit</title>
+
+  <!-- ChatKit Script -->
+  <script src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js" async></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 30px;
+      align-items: start;
+    }
+
+    .info-panel {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .info-panel h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+      color: #1a202c;
+    }
+
+    .info-panel h2 {
+      font-size: 20px;
+      margin: 25px 0 15px;
+      color: #2d3748;
+    }
+
+    .info-panel p {
+      color: #4a5568;
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+
+    .info-panel ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .info-panel li {
+      padding: 10px 0;
+      color: #4a5568;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .info-panel li:last-child {
+      border-bottom: none;
+    }
+
+    .info-panel .emoji {
+      margin-right: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .stat-card {
+      background: #f7fafc;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .chat-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      height: 700px;
+    }
+
+    #chatkit-widget {
+      width: 100%;
+      height: 100%;
+    }
+
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #718096;
+    }
+
+    .spinner {
+      border: 3px solid #e2e8f0;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .footer {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: white;
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .car-item {
+      background: #f7fafc;
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      border-left: 3px solid #667eea;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .car-item:hover {
+      background: #edf2f7;
+      transform: translateX(2px);
+    }
+
+    .car-name {
+      font-weight: 600;
+      color: #1a202c;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .car-price {
+      color: #667eea;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .car-year {
+      color: #718096;
+      font-size: 12px;
+    }
+
+    #cars-list {
+      scrollbar-width: thin;
+      scrollbar-color: #667eea #e2e8f0;
+    }
+
+    #cars-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #cars-list::-webkit-scrollbar-track {
+      background: #e2e8f0;
+      border-radius: 3px;
+    }
+
+    #cars-list::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 3px;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-container {
+        height: 600px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Info Panel -->
+    <div class="info-panel">
+      <div class="badge">AI-Powered</div>
+      <h1>🚗 Sports Car Search Agent</h1>
+      <p>Find and compare the latest sports cars using AI-powered web search</p>
+
+      <h2>Features</h2>
+      <ul>
+        <li><span class="emoji">🔍</span>Real-time web search for new sports cars</li>
+        <li><span class="emoji">💰</span>Price comparison and analysis</li>
+        <li><span class="emoji">🗄️</span>Automatic database storage</li>
+        <li><span class="emoji">🔄</span>Duplicate detection</li>
+        <li><span class="emoji">📊</span>Similar car recommendations</li>
+      </ul>
+
+      <h2>How to Use</h2>
+      <p>Ask the agent questions like:</p>
+      <ul>
+        <li>"Find me new sports cars under $100k"</li>
+        <li>"What's the best sports car in 2024?"</li>
+        <li>"Compare sports cars around $150k"</li>
+        <li>"Show me hybrid sports cars"</li>
+      </ul>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="total-cars">-</div>
+          <div class="stat-label">Cars in DB</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="total-searches">-</div>
+          <div class="stat-label">Searches</div>
+        </div>
+      </div>
+
+      <h2>Cars in Database</h2>
+      <div id="cars-list" style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
+        <div style="text-align: center; padding: 20px; color: #718096;">
+          Loading cars...
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="chat-container">
+      <openai-chatkit id="chatkit-widget">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading ChatKit...</p>
+        </div>
+      </openai-chatkit>
+    </div>
+
+    <div class="footer">
+      <p>Powered by OpenAI Agent Builder & ChatKit</p>
+    </div>
+  </div>
+
+  <script>
+    // Generate a device ID for the user
+    function getDeviceId() {
+      let deviceId = localStorage.getItem('deviceId');
+      if (!deviceId) {
+        deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('deviceId', deviceId);
+      }
+      return deviceId;
+    }
+
+    // Initialize ChatKit
+    async function initializeChatKit() {
+      const deviceId = getDeviceId();
+      const chatkit = document.getElementById('chatkit-widget');
+
+      // Wait for custom element to be defined
+      await customElements.whenDefined('openai-chatkit');
+
+      try {
+        // Set options on the ChatKit web component
+        chatkit.setOptions({
+          api: {
+            async getClientSecret(currentClientSecret) {
+              if (currentClientSecret) {
+                // Refresh existing session
+                const response = await fetch('/api/chatkit/refresh', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    currentClientSecret: currentClientSecret
+                  }),
+                });
+
+                if (!response.ok) {
+                  console.error('Failed to refresh session:', await response.text());
+                  throw new Error('Failed to refresh session');
+                }
+
+                const data = await response.json();
+                return data.client_secret;
+              } else {
+                // Create new session
+                const response = await fetch('/api/chatkit/session', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    deviceId: deviceId
+                  }),
+                });
+
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  console.error('Failed to create session:', errorText);
+                  throw new Error('Failed to create session: ' + errorText);
+                }
+
+                const data = await response.json();
+                console.log('Session created successfully');
+                return data.client_secret;
+              }
+            },
+          },
+        });
+
+        console.log('ChatKit initialized successfully');
+      } catch (error) {
+        console.error('Error initializing ChatKit:', error);
+        chatkit.innerHTML = `
+          <div class="loading">
+            <p style="color: #e53e3e;">Failed to load ChatKit</p>
+            <p style="font-size: 14px; margin-top: 10px;">${error.message}</p>
+            <p style="font-size: 12px; margin-top: 5px; color: #718096;">Check browser console for details</p>
+          </div>
+        `;
+      }
+    }
+
+    // Load cars and stats from database
+    async function loadCarsAndStats() {
+      try {
+        const response = await fetch('/api/cars');
+        if (!response.ok) {
+          throw new Error('Failed to fetch cars');
+        }
+
+        const data = await response.json();
+        const { cars, stats } = data;
+
+        // Update stats
+        document.getElementById('total-cars').textContent = stats.total_cars || 0;
+        document.getElementById('total-searches').textContent = stats.total_searches || 0;
+
+        // Display cars
+        const carsList = document.getElementById('cars-list');
+
+        if (cars.length === 0) {
+          carsList.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: #718096;">
+              No cars yet. Run the agent to add some!
+            </div>
+          `;
+          return;
+        }
+
+        carsList.innerHTML = cars.map(car => `
+          <div class="car-item" title="${car.description || 'No description'}">
+            <div class="car-name">${car.year} ${car.make} ${car.model}</div>
+            <div class="car-price">$${car.price.toLocaleString()}</div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading cars:', error);
+        document.getElementById('cars-list').innerHTML = `
+          <div style="text-align: center; padding: 20px; color: #e53e3e;">
+            Failed to load cars
+          </div>
+        `;
+      }
+    }
+
+    // Refresh cars periodically
+    function startAutoRefresh() {
+      setInterval(loadCarsAndStats, 10000); // Refresh every 10 seconds
+    }
+
+    // Initialize when page loads
+    window.addEventListener('load', () => {
+      initializeChatKit();
+      loadCarsAndStats();
+      startAutoRefresh();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+name: Scheduled Car Search
+
+on:
+  schedule:
+    # Run every day at 9 AM UTC (adjust timezone as needed)
+    - cron: '0 9 * * *'
+
+  # Allow manual triggering from GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  search-cars:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create data directory
+        run: mkdir -p data
+
+      - name: Download database from Railway
+        env:
+          RAILWAY_URL: ${{ secrets.RAILWAY_URL }}
+        run: |
+          # Download the database backup from Railway
+          if [ ! -z "$RAILWAY_URL" ]; then
+            curl -o data/cars.db "$RAILWAY_URL/api/database/download" || echo "Failed to download database, starting fresh"
+          fi
+
+      - name: Initialize database
+        run: npm run init-db
+
+      - name: Run car search agent
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_AGENT_ID: ${{ secrets.OPENAI_AGENT_ID }}
+          SEARCH_QUERY: ${{ secrets.SEARCH_QUERY || 'new sports cars 2024 2025' }}
+          PRICE_TOLERANCE: ${{ secrets.PRICE_TOLERANCE || '15000' }}
+        run: npm start
+
+      - name: Upload database to Railway
+        env:
+          RAILWAY_URL: ${{ secrets.RAILWAY_URL }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          if [ ! -z "$RAILWAY_URL" ] && [ -f "data/cars.db" ]; then
+            curl -X POST "$RAILWAY_URL/api/database/upload" \
+              -H "Authorization: Bearer $RAILWAY_API_TOKEN" \
+              -F "database=@data/cars.db"
+          fi
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: car-database-${{ github.run_number }}
+          path: data/cars.db
+          retention-days: 30
+
+      - name: Generate summary
+        run: |
+          echo "## Car Search Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Run completed at $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f "data/cars.db" ]; then
+            echo "Database size: $(du -h data/cars.db | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          fi
