@@ -277,8 +277,26 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(port, () => {
-  console.log(`\n🚀 Car Agent ChatKit Server running on http://localhost:${port}`);
-  console.log(`📝 Workflow ID: ${process.env.OPENAI_AGENT_ID}`);
-  console.log(`\n💡 Open http://localhost:${port} in your browser to use ChatKit\n`);
+// Initialize database on startup
+async function initializeDatabase() {
+  try {
+    const { initDatabase } = await import('./src/database/init.js');
+    await initDatabase();
+    console.log('✓ Database initialized');
+  } catch (error) {
+    console.error('Warning: Database initialization failed:', error.message);
+    console.log('Database will be created on first use');
+  }
+}
+
+// Start server
+initializeDatabase().then(() => {
+  app.listen(port, () => {
+    console.log(`\n🚀 Car Agent ChatKit Server running on http://localhost:${port}`);
+    console.log(`📝 Workflow ID: ${process.env.OPENAI_AGENT_ID}`);
+    console.log(`\n💡 Open http://localhost:${port} in your browser to use ChatKit\n`);
+  });
+}).catch(error => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
